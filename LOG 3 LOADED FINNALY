@@ -1,0 +1,73 @@
+Microsoft Windows [Version 10.0.19045.4651]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\WINDOWS\system32>
+C:\WINDOWS\system32>cd
+C:\WINDOWS\system32
+
+C:\WINDOWS\system32>cd C:\Users\jakeh\Desktop\mithra
+
+C:\Users\jakeh\Desktop\mithra>dir
+ Volume in drive C has no label.
+ Volume Serial Number is 0EF4-6DD5
+
+ Directory of C:\Users\jakeh\Desktop\mithra
+
+15/06/2025  07:00 PM    <DIR>          .
+15/06/2025  07:00 PM    <DIR>          ..
+15/06/2025  07:00 PM            12,019 mithra_v2_10.py
+15/06/2025  06:48 PM            12,019 python mithra_v2_10.py
+               2 File(s)         24,038 bytes
+               2 Dir(s)  345,270,050,816 bytes free
+
+C:\Users\jakeh\Desktop\mithra>mithra_v2_10.py
+
+C:\Users\jakeh\Desktop\mithra>py mithra_V2_10.PY
+Installing missing package: SpeechRecognition
+Requirement already satisfied: SpeechRecognition in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (3.14.3)
+Requirement already satisfied: typing-extensions in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (from SpeechRecognition) (4.14.0)
+Requirement already satisfied: standard-aifc in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (from SpeechRecognition) (3.13.0)
+Requirement already satisfied: audioop-lts in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (from SpeechRecognition) (0.2.1)
+Requirement already satisfied: standard-chunk in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (from standard-aifc->SpeechRecognition) (3.13.0)
+Installing missing package: pydantic-settings
+Requirement already satisfied: pydantic-settings in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (2.9.1)
+Requirement already satisfied: pydantic>=2.7.0 in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (from pydantic-settings) (2.11.7)
+Requirement already satisfied: python-dotenv>=0.21.0 in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (from pydantic-settings) (1.1.0)
+Requirement already satisfied: typing-inspection>=0.4.0 in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (from pydantic-settings) (0.4.1)
+Requirement already satisfied: annotated-types>=0.6.0 in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (from pydantic>=2.7.0->pydantic-settings) (0.7.0)
+Requirement already satisfied: pydantic-core==2.33.2 in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (from pydantic>=2.7.0->pydantic-settings) (2.33.2)
+Requirement already satisfied: typing-extensions>=4.12.2 in c:\users\jakeh\appdata\local\programs\python\python313\lib\site-packages (from pydantic>=2.7.0->pydantic-settings) (4.14.0)
+Traceback (most recent call last):
+  File "C:\Users\jakeh\Desktop\mithra\mithra_V2_10.PY", line 85, in <module>
+    settings = Settings()
+  File "C:\Users\jakeh\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic_settings\main.py", line 176, in __init__
+    super().__init__(
+    ~~~~~~~~~~~~~~~~^
+        **__pydantic_self__._settings_build_values(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<26 lines>...
+        )
+        ^
+    )
+    ^
+  File "C:\Users\jakeh\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic\main.py", line 253, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 6 validation errors for Settings
+OPENAI_API_KEY
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+NEWSAPI_KEY
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+EMAIL_ADDRESS
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+EMAIL_PASSWORD
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+FERNET_KEY
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+MITHRA_API_KEY
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
