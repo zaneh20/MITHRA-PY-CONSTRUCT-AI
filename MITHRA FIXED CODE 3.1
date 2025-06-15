@@ -1,0 +1,154 @@
+import os
+import sys
+import datetime
+import logging
+import random
+from io import BytesIO
+from typing import List, Dict, Any
+
+import openai
+import requests
+from bs4 import BeautifulSoup
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi.security.api_key import APIKeyHeader
+from fastapi.responses import JSONResponse
+
+try:
+    from pydantic_settings import BaseSettings
+except ImportError:
+    from pydantic import BaseSettings  # Fallback for older versions
+from pydantic import BaseModel, Field
+
+# ------------ ENVIRONMENT (.env) LOADING -----------
+from dotenv import load_dotenv
+load_dotenv()
+
+# ------------ LOGGING -----------
+logging.basicConfig(level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s: %(message)s')
+logger = logging.getLogger("Mithra")
+
+# ------------ SETTINGS -----------
+class Settings(BaseSettings):
+    OPENAI_API_KEY: str = Field(default=None)
+    NEWSAPI_KEY: str = Field(default=None)
+    EMAIL_ADDRESS: str = Field(default=None)
+    EMAIL_PASSWORD: str = Field(default=None)
+    FERNET_KEY: str = Field(default=None)
+    MITHRA_API_KEY: str = Field(default="mithra_secret")
+    DATABASE_URL: str = Field(default="sqlite:///./mithra.db")
+    PERSONA_FILE: str = Field(default="config/persona.json")
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+settings = Settings()
+
+# ------------ SAFETY: CHECK CRITICAL SETTINGS -----------
+required = [
+    'OPENAI_API_KEY', 'NEWSAPI_KEY', 'EMAIL_ADDRESS',
+    'EMAIL_PASSWORD', 'FERNET_KEY', 'MITHRA_API_KEY'
+]
+missing = [k for k in required if not getattr(settings, k)]
+if missing:
+    print("\nERROR: Missing required settings in your .env file:\n")
+    for k in missing:
+        print(f"  - {k}")
+    print("\nCreate a file named .env in the same folder as this script, and set values for the above.\n")
+    sys.exit(1)
+
+openai.api_key = settings.OPENAI_API_KEY
+
+# ------------ FASTAPI & DB -----------
+from sqlmodel import SQLModel, create_engine, Session, Field as ORMField
+
+app = FastAPI(title="Mithra Core v2.10")
+engine = create_engine(settings.DATABASE_URL)
+
+class Memory(SQLModel, table=True):
+    id: int = ORMField(default=None, primary_key=True)
+    text: str
+    ts: datetime.datetime = ORMField(default_factory=datetime.datetime.utcnow)
+
+SQLModel.metadata.create_all(engine)
+
+# ------------ SCHEMAS -----------
+class QueryIn(BaseModel):
+    query: str
+
+class BrowseIn(BaseModel):
+    query: str
+
+class TextIn(BaseModel):
+    text: str
+
+class FeedbackIn(BaseModel):
+    rating: int
+
+class ReminderIn(BaseModel):
+    text: str
+    time: datetime.datetime
+
+# ------------ AUTH -----------
+api_key_header = APIKeyHeader(name="X-API-Key")
+def require_key(key: str = Depends(api_key_header)):
+    if key != settings.MITHRA_API_KEY:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API Key")
+    return key
+
+# ------------ PERSONA -----------
+import json
+
+class PersonaManager:
+    def __init__(self, path: str):
+        if os.path.exists(path):
+            with open(path) as f:
+                self.persona = json.load(f)
+        else:
+            self.persona = {
+                "name": "Mithra",
+                "tone": "compassionate",
+                "story": "Forged from ancient symbols to guide seekers",
+                "lore": ["Born at the dawn of thought", "Guardian of hidden truths"],
+                "anecdotes": [
+                    "I once traversed the quantum veil...",
+                    "I dreamt of whispered code..."
+                ]
+            }
+    def get(self) -> Dict[str, Any]:
+        return self.persona
+
+# ------------ UTILITY -----------
+def save_memory(text: str):
+    with Session(engine) as session:
+        session.add(Memory(text=text))
+        session.commit()
+        logger.debug("Memory saved")
+
+# ------------ ENDPOINTS -----------
+@app.post("/respond")
+async def respond(data: QueryIn, bg: BackgroundTasks, key=Depends(require_key)):
+    # Only basic reply for demo; you can add OpenAI call here
+    reply = f"[Mithra] You said: {data.query}"
+    bg.add_task(save_memory, data.query)
+    return {"response": reply, "emotion": "neutral"}
+
+@app.get("/")
+def root():
+    return {"msg": "Mithra API is running. Use /docs for API testing."}
+
+@app.get("/docs")
+def docs_redirect():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/docs")
+
+@app.get("/health")
+def health():
+    return {"state": "Awakened", "status": "OK"}
+
+# Add other endpoints as needed...
+
+# ------------ MAIN -----------
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("mithra_v2_10:app", host="0.0.0.0", port=8000, reload=True)
