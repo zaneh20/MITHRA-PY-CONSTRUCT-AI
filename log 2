@@ -1,0 +1,499 @@
+>>> import datetime
+>>> import logging
+>>> import random
+>>> from io import BytesIO
+>>> from typing import List, Dict, Any
+>>>
+>>> import openai
+>>> import requests
+>>> from bs4 import BeautifulSoup
+>>> from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+>>> from fastapi.security.api_key import APIKeyHeader
+>>> from fastapi.responses import JSONResponse
+>>> from pydantic import BaseSettings, BaseModel, Field
+Traceback (most recent call last):
+  File "<python-input-37>", line 1, in <module>
+    from pydantic import BaseSettings, BaseModel, Field
+  File "C:\Users\jakeh\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic\__init__.py", line 426, in __getattr__
+    return _getattr_migration(attr_name)
+  File "C:\Users\jakeh\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic\_migration.py", line 296, in wrapper
+    raise PydanticImportError(
+    ...<3 lines>...
+    )
+pydantic.errors.PydanticImportError: `BaseSettings` has been moved to the `pydantic-settings` package. See https://docs.pydantic.dev/2.11/migration/#basesettings-has-moved-to-pydantic-settings for more details.
+
+For further information visit https://errors.pydantic.dev/2.11/u/import-error
+>>> from sqlmodel import SQLModel, create_engine, Session, Field as ORMField
+>>> from cryptography.fernet import Fernet
+>>> from newsapi import NewsApiClient
+>>> from transformers import pipeline
+>>> from diffprivlib.mechanisms import Laplace
+>>> from apscheduler.schedulers.background import BackgroundScheduler
+>>> from gtts import gTTS
+>>> import speech_recognition as sr
+>>> import subprocess as sp
+>>>
+>>> logging.basicConfig(level=logging.INFO,
+...                     format='[%(asctime)s] %(levelname)s: %(message)s')
+>>> logger = logging.getLogger("Mithra")
+>>>
+>>> # ---------- Config ----------
+>>> class Settings(BaseSettings):
+...             OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
+...                 NEWSAPI_KEY: str   = Field(..., env="NEWSAPI_KEY")
+...                     EMAIL_ADDRESS: str = Field(..., env="EMAIL_ADDRESS")
+...                         EMAIL_PASSWORD: str= Field(..., env="EMAIL_PASSWORD")
+...                             FERNET_KEY: str    = Field(..., env="FERNET_KEY")
+...                                 MITHRA_API_KEY: str= Field(..., env="MITHRA_API_KEY")
+...                                     DATABASE_URL: str  = Field("sqlite:///./mithra.db", env="DATABASE_URL")
+...                                         PERSONA_FILE: str  = Field("config/persona.json", env="PERSONA_FILE")
+...                                             class Config:
+...                                                                 case_sensitive = False
+...
+  File "<python-input-52>", line 3
+    NEWSAPI_KEY: str   = Field(..., env="NEWSAPI_KEY")
+IndentationError: unexpected indent
+>>> settings = Settings()
+Traceback (most recent call last):
+  File "<python-input-53>", line 1, in <module>
+    settings = Settings()
+               ^^^^^^^^
+NameError: name 'Settings' is not defined
+>>> openai.api_key = settings.OPENAI_API_KEY
+Traceback (most recent call last):
+  File "<python-input-54>", line 1, in <module>
+    openai.api_key = settings.OPENAI_API_KEY
+                     ^^^^^^^^
+NameError: name 'settings' is not defined
+>>> fernet = Fernet(settings.FERNET_KEY.encode())
+Traceback (most recent call last):
+  File "<python-input-55>", line 1, in <module>
+    fernet = Fernet(settings.FERNET_KEY.encode())
+                    ^^^^^^^^
+NameError: name 'settings' is not defined
+>>>
+>>> # ---------- FastAPI & DB ----------
+>>> app = FastAPI(title="Mithra Core v2.10")
+>>> engine = create_engine(settings.DATABASE_URL)
+Traceback (most recent call last):
+  File "<python-input-59>", line 1, in <module>
+    engine = create_engine(settings.DATABASE_URL)
+                           ^^^^^^^^
+NameError: name 'settings' is not defined
+>>>
+>>> class Memory(SQLModel, table=True):
+...                 id: int = ORMField(default=None, primary_key=True)
+...                     text: str
+...                         ts: datetime.datetime = ORMField(default_factory=datetime.datetime.utcnow)
+...
+  File "<python-input-61>", line 3
+    text: str
+IndentationError: unexpected indent
+>>> SQLModel.metadata.create_all(engine)
+Traceback (most recent call last):
+  File "<python-input-62>", line 1, in <module>
+    SQLModel.metadata.create_all(engine)
+                                 ^^^^^^
+NameError: name 'engine' is not defined
+>>>
+>>> # ---------- Schemas ----------
+>>> class QueryIn(BaseModel):
+...                     query: str
+...
+Traceback (most recent call last):
+  File "<python-input-65>", line 1, in <module>
+    class QueryIn(BaseModel):
+                  ^^^^^^^^^
+NameError: name 'BaseModel' is not defined
+>>> class BrowseIn(BaseModel):
+...                         query: str
+...
+Traceback (most recent call last):
+  File "<python-input-66>", line 1, in <module>
+    class BrowseIn(BaseModel):
+                   ^^^^^^^^^
+NameError: name 'BaseModel' is not defined
+>>> class TextIn(BaseModel):
+...                             text: str
+...
+Traceback (most recent call last):
+  File "<python-input-67>", line 1, in <module>
+    class TextIn(BaseModel):
+                 ^^^^^^^^^
+NameError: name 'BaseModel' is not defined
+>>> class FeedbackIn(BaseModel):
+...                                 rating: int
+...
+Traceback (most recent call last):
+  File "<python-input-68>", line 1, in <module>
+    class FeedbackIn(BaseModel):
+                     ^^^^^^^^^
+NameError: name 'BaseModel' is not defined
+>>> class ReminderIn(BaseModel):
+...                                     text: str
+...                                         time: datetime.datetime
+...
+  File "<python-input-69>", line 3
+    time: datetime.datetime
+IndentationError: unexpected indent
+>>> # ---------- Auth ----------
+>>> api_key_header = APIKeyHeader(name="X-API-Key")
+>>> def require_key(key: str = Depends(api_key_header)):
+...                                         if key != settings.MITHRA_API_KEY:
+...                                                                                         raise HTTPException(status_\code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API Key")
+...                                                                                             return key
+...
+  File "<python-input-72>", line 4
+    return key
+IndentationError: unexpected indent
+>>> # ---------- PersonaManager ----------
+>>> class PersonaManager:
+...                                             def __init__(self, path: str):
+...                                                                                                 if os.path.exists(p\ath):
+...                                                                                                                    ath):                                 with open(path) as f:
+...                                                                                                                    \                                                                                                 self.persona = json.lo\ad(f)                                                                                                                                                  with open(path) as f:                                                                   \ath):
+...                                                                                                                    \                                                                                                                                                              self.persona = json.lo\                                                                                          with open(path) as f:         ad(f)
+...                                                                                                                    \                                                            \e": "Mithra",                                                                                                                                                                                                            self.persona = json.lo\                                                                                                    else:               ad(f)
+...                                                          ...                                                        ...                                                                                                                            self.persona = json.lo\                                                                                                  \to guide seekers",   ad(f)
+                              ...                                                                                                                    \                                                                                         \        \                                                                                                "lore": ["Bor \n at the                                                                                                                                                                                                                         else:
+...                                                                                                                    \...      ...                                                                                                                    \                                                                                                                       \                                                                                                               ...                                                                                                                                                                                        \                                                            \ithra",                                                                                                       "name": "Mithra",                                                                                                       \...                                                                                                                    \                                                                                                       "tone": "compassionate","Mithra",                           \                                                                            ...                                                                                                                    \                    \                                                                                          "story""tone": "compassionate"                                                                                                                       \                                                                                                  \lore": ["Bor\...                                                                                               "story": "Forged from ancient\                                                                                                                       \ symbols to guide seekers",
+                                                                                                               "story": "Forged from ancient\                                                                                                                       \ symbols to guide seekers",                                                                               "lore": ["Bor\                                                                                          "story": "Forged from ancient\ symbols to guide seekers",                                                                        n at the dawn of thougsymbols to guide seekers",                                                                               "lore": ["Bor\
+n at the dawn of thought", "Guardian of hidden truths"],
+                                                                                                                               "lore": ["Bor\
+n at the dawn of thought", "Guardian of hidden truths"],          "anecdotes": ["I once traversed the quan             \                def get(self) -> Dict[str, Any]:
+
+                                                                                                                       \                                                                  "anecdotes": ["I once traversed the quantum veil...", "I dreamt of whispered code..."]                                  "anecdotes": ["I once traversed the quantum veil...",                                                                     return self.persona
+
+
+            }
+
+  File "<python-input-74>", line 6
+    else:
+IndentationError: unexpected indent
+>>> # ---------- EmotionEngine ----------
+>>> class EmotionEngine:
+...                                                 def interpret(self, score: float) -> str:
+...                                                                                                         if score > \0.7: return "joy"
+...                                                                                                                 if \score > 0.3: return "curiosity"
+...                                                                                                                    \     if abs(score) <= 0.3: return "calm"
+...                                                                                                                    \             if score < -0.7: return "frustration"
+...                                                                                                                    \                     return "empathy"
+...                                                                                                                    \
+  File "<python-input-76>", line 4
+    if score > 0.3: return "curiosity"
+IndentationError: unexpected indent
+>>> # ---------- Utility ----------
+>>> def save_memory(text: str):
+...                                                     with Session(engine) as session:
+...                                                                                                                 ses\sion.add(Memory(text=text))
+...                                                                                                                    \     session.commit()
+...                                                                                                                    \         logger.debug("Memory saved")
+...                                                                                                                    \
+  File "<python-input-78>", line 4
+    session.commit()
+IndentationError: unexpected indent
+>>> # ---------- Real Modules ----------
+>>> class FormalVerifier:
+...                                                         def verify(self) -> bool:
+...                                                                                                                    \     try:
+...                                                                                                                    \                                                                         res = sp.run(["tlc2", settings.PERSONA_FILE], \capture_output=True)
+...                                                                                                                    \                                                                                     return res.returncode == 0
+...                                                                                                                    \                                                                                             except FileNotFoundError:                                                                                                                        \\                                                                                                                                                                 logger.warning("TLA+ tool not found")                                                                                                                                                                \\                                                                                                                                                                             return False                                                                                                                                                                             \\                                                                                                                        
+  File "<python-input-80>", line 5
+    return res.returncode == 0
+IndentationError: unexpected indent
+>>> class DifferentialPrivacyManager:
+...                                                             def sanitize(self, data: List[str]) -> List[str]:
+...                                                                                                                    \             mech = Laplace(epsilon=1.0)
+...                                                                                                                    \                     return [mech.randomise(len(txt))*"" + txt for txt in data]
+...                                                                                                                    \
+  File "<python-input-81>", line 4
+    return [mech.randomise(len(txt))*"" + txt for txt in data]
+IndentationError: unexpected indent
+>>> class WebExplorer:
+...                                                                 def __init__(self, key: str):
+...                                                                                                                    \                     self.client = NewsApiClient(api_key=key)
+...                                                                                                                    \                         def search(self, query: str) -> List[str]:
+...                                                                                                                    \                                                                                                 articles = self.client\.get_everything(q=query, language="en", page_size=5)
+...                                                                                                                    \                                                                                                         return [a["url\"] for a in articles.get("articles", [])]
+...                                                                                                                    \                                                                                                             def fetch(\self, url: str) -> str:                                                                                                                                                                                                                       \\                                                                                                                                                                                     r = requests.get(url, timeout=5)                                                                                                                                                 \\                                                                                                                                                                                             return BeautifulSoup(r.text, "html.parser").get_t \ext()[:5000]                                                                                                                                                                                                                                  \\                                                                                                                        
+  File "<python-input-82>", line 4
+    def search(self, query: str) -> List[str]:
+IndentationError: unexpected indent
+>>> class SentimentAnalyzer:
+...                                                                     def __init__(self):
+...                                                                                                                    \                             self.pipe = pipeline("sentiment-analysis")
+...                                                                                                                    \                                 def analyze(self, text: str) -> float:
+...                                                                                                                    \                                                                                                             out = self\.pipe(text[:512])[0]
+...                                                                                                                    \                                                                                                                     re\turn out["score"] if out["label"] == "POSITIVE" else -out["score"]
+...                                                                                                                    \
+  File "<python-input-83>", line 4
+    def analyze(self, text: str) -> float:
+IndentationError: unexpected indent
+>>> class ReminderScheduler:
+...                                                                         def __init__(self):
+...                                                                                                                    \                                     self.sched = BackgroundScheduler()
+...                                                                                                                    \                                             self.sched.start()
+...                                                                                                                    \                                                 def schedule(self, text: str, time: datetime.datetime):                                                                                                                                      \\                                                                                                                                 self.sched.add_job(lambda: logger.info(f"Reminder: {text}"), "date", run_date=time)                                                                                                                                                  \\                                                                                                                        
+  File "<python-input-84>", line 4
+    self.sched.start()
+IndentationError: unexpected indent
+>>> class TTSManager:
+...                                                                             def synthesize(self, text: str) -> str:
+...                                                                                                                    \                                             buf = BytesIO()
+...                                                                                                                    \                                                     gTTS(text).write_to_fp(buf)
+...                                                                                                                    \                                                             return buf.getvalue().hex()
+...                                                                                                                    \
+  File "<python-input-85>", line 4
+    gTTS(text).write_to_fp(buf)
+IndentationError: unexpected indent
+>>> class STTManager:
+...                                                                                 def transcribe(self, audio_hex: str\) -> str:
+...                                                                                                                    \                                                     buf = BytesIO(bytes.fromhex(audio_hex))
+...                                                                                                                    \                                                             recog = sr.Recognizer()
+...                                                                                                                    \                                                                     with sr.AudioFile(buf) as src:                                                                                                                                           \\                                                                                                                                                                 audio = recog.record(src)                                                                                                                                                                            \\                                                                                                                                                                         return recog.recognize_google(audio)                                                                                                                                                         \\                                                                                                                        
+  File "<python-input-86>", line 4
+    recog = sr.Recognizer()
+IndentationError: unexpected indent
+>>> def need_clarify(query: str) -> bool:
+...                                                                                     resp = openai.ChatCompletion.cr\eate(
+...                                                                                             model="gpt-4o-mini",
+...                                                                                                     messages=[{"rol\e":"user","content":query}]
+...                                                                                                         )
+...                                                                                                             return \resp.choices[0].finish_reason != "stop"
+...
+  File "<python-input-87>", line 6
+    return resp.choices[0].finish_reason != "stop"
+IndentationError: unexpected indent
+>>> persona = PersonaManager(settings.PERSONA_FILE)
+Traceback (most recent call last):
+  File "<python-input-88>", line 1, in <module>
+    persona = PersonaManager(settings.PERSONA_FILE)
+              ^^^^^^^^^^^^^^
+NameError: name 'PersonaManager' is not defined
+>>> emotion = EmotionEngine()
+Traceback (most recent call last):
+  File "<python-input-89>", line 1, in <module>
+    emotion = EmotionEngine()
+              ^^^^^^^^^^^^^
+NameError: name 'EmotionEngine' is not defined
+>>> dp = DifferentialPrivacyManager()
+Traceback (most recent call last):
+  File "<python-input-90>", line 1, in <module>
+    dp = DifferentialPrivacyManager()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'DifferentialPrivacyManager' is not defined
+>>> webexp = WebExplorer(settings.NEWSAPI_KEY)
+Traceback (most recent call last):
+  File "<python-input-91>", line 1, in <module>
+    webexp = WebExplorer(settings.NEWSAPI_KEY)
+             ^^^^^^^^^^^
+NameError: name 'WebExplorer' is not defined
+>>> sentim = SentimentAnalyzer()
+Traceback (most recent call last):
+  File "<python-input-92>", line 1, in <module>
+    sentim = SentimentAnalyzer()
+             ^^^^^^^^^^^^^^^^^
+NameError: name 'SentimentAnalyzer' is not defined
+>>> reminder = ReminderScheduler()
+Traceback (most recent call last):
+  File "<python-input-93>", line 1, in <module>
+    reminder = ReminderScheduler()
+               ^^^^^^^^^^^^^^^^^
+NameError: name 'ReminderScheduler' is not defined
+>>> tts = TTSManager()
+Traceback (most recent call last):
+  File "<python-input-94>", line 1, in <module>
+    tts = TTSManager()
+          ^^^^^^^^^^
+NameError: name 'TTSManager' is not defined
+>>> stt = STTManager()
+Traceback (most recent call last):
+  File "<python-input-95>", line 1, in <module>
+    stt = STTManager()
+          ^^^^^^^^^^
+NameError: name 'STTManager' is not defined
+>>>
+>>> # ---------- Memory Consolidator & Dream Generator ----------
+>>> class MemoryConsolidator(threading.Thread):
+...                                                                                         def run(self):
+...                                                                                                                    \                                                                     while True:                                        ...                                                                                                                    \                                                                                                                                                                                                                                                                                      \                                                                               \\                                                                                         threading.Event().wait(86400)
+                                                                                                                      \
+...                                                                                                                                                                                                                          with Session(engine) as session:                                                                                                                                                         recent = session.exec(SQLModel.select(Memory).order_by(Memory.ts.desc())                                                                                                                        \
+                                                         \                                                                                                                                                                                    \
+                                                                                                                       \                                                                                                                      \with Session(engine) as session:                recent = session.exec(SQLModel.select(Memory).order_by(Memory.ts.desc())\...                                                                                                                    \limit(10)).all()                                                                                                        ...                                                                                                                                                                                   with Session(engine) as session:
+...                                                                                                                    \                                                                       \recent = session.exec(SQLModel.select(Memory).order_by(Memory.ts.desc())\                                                                                                                       \                                              \          dream = openai.ChatCompletion.create \(                        .limit(10)).all()
+           texts = [m.tex...                                            recent = session.exec(SQLModel.select(Memory).order_by(Memory.ts.desc())\                                                                                              \
+                         .limit(10)).all()
+.limit(10)).all()
+...                                                                                                                    \())\                       \                                                                                                                                                                                                                           \     \                                                                                   dream = openai.ChatCom .limit(10)).all()
+...                                                                                                                    \        ...                                                                                                                        texts = [m.text for m in recent]                                                                                                                                                                                  \
+                                                                                                                       \                                                                                                                       texts = [m.text for m in recent] "Write a poetic dream combining: " + ";\                                               p...                                                                                                                    \                                               \                                                                                   dream = openai.Ch                             texts = [m.text for m in recent]
+...                                                                                                                    \ ".join(texts)
+...                                                                                                                                                \                                                                                                                             \                                                                                   dream = openai.ChatCompletion.cr".join(texts)                                                         prompt = "Write a poet".join(texts)
+                           \    \                                                                                      m                             ".join(texts)
+           dre                                                                                                                       \                                  (                                  dream = openai.ChatCompletion.create\(
+                                               \                                                 dr            dream = openai.ChatCompletion.create\                                                                                                                               \                                                                                    ...           (                                                                                    model="gpt-4o-mini",
+...                                                                                                                    \             \
+                                                                                                                       \            \                                                                                                   model="                model="gpt-4o-mini",                                                                                    mess\                                                                                                                   \                                                                                                                 model="    ages=[{"role":"system","content":"You are Mithra, poet."},
+...                                                                                                                    \                                                                                                                       mess\                                                                                                                   \                                                                                                                           \ages=[{"role":"system","content":"You are Mithra, poet."},
+ess\ages=[{"role":"system","content":"You are Mithra, poet."},                                                                                            ).choices[0].message.content
+
+                                                                                                                                              {"role":"user","content":prompt}]
+
+                                              save_memory(f"Dream:{dream}")
+
+
+                                  ).choices[0].message.content
+
+
+  File "<python-input-98>", line 5
+    with Session(engine) as session:
+IndentationError: unexpected indent
+>>> threading.Thread(target=MemoryConsolidator, daemon=True).start()
+Traceback (most recent call last):
+  File "<python-input-99>", line 1, in <module>
+    threading.Thread(target=MemoryConsolidator, daemon=True).start()
+                            ^^^^^^^^^^^^^^^^^^
+NameError: name 'MemoryConsolidator' is not defined
+>>>
+>>> # ---------- Endpoints ----------
+>>> @app.post("/browse")
+... async def browse(data: BrowseIn, key=Depends(require_key)):
+...                                                                                             return {"urls": webexp.\search(data.query)}
+...
+Traceback (most recent call last):
+  File "<python-input-102>", line 2, in <module>
+    async def browse(data: BrowseIn, key=Depends(require_key)):
+                                                 ^^^^^^^^^^^
+NameError: name 'require_key' is not defined
+>>> @app.post("/fetch")
+... async def fetch(url: str, key=Depends(require_key)):
+...                                                                                                 try:
+...                                                                                                                    \                                                                                     content = webexp.fetch(url)
+...                                                                                                                    \                                                                                             return {"content": content\}
+...                                                                                                                    \                                                                                                 except:                                                                                                                                      \\                                                                                                                                                                                                         raise HTTPException(502, "Fetch faile \d")                                                                                                                                                                                                                                           \\                                                                                                                        
+  File "<python-input-103>", line 5
+    return {"content": content}
+IndentationError: unexpected indent
+>>> @app.post("/respond")
+... async def respond(data: QueryIn, bg: BackgroundTasks, key=Depends(require_key)):
+...                                                                                                     if not data.que\ry:
+...                                                                                                                    \                                                                                             raise HTTPException(400, "\Empty query")                                                                                                                                                                                                    raise HTTPException(400, "\   \                                                                                                 if need_clarify(datEmpty query")                                                                                                                                                                                                                                     \\                                                                                             if need_clarify(data.q\                                                                                         return {"clarify": "Could you cla \...                                                                                                                                                                                if need_clarify(data.q\                     uery):
+                                                                                  uery):
+                                                                                  ...                                                                                                                    \                                                                                                                                                             return {"clarify": "Could you cla\                                                                                                                        rify your request?"}                      \                          return {"clarify": "Could you cla\                                                                                                      \return {"clarify": "Could you cla\?"}                                on.create(
+on.create(
+...                                                                                                                    \                                                                                                                      \        model="gpt-4o-mini",                                                                                                                                                                                                         \          \             on.create(                                                                                                model="gpt-4o-mini",                                                                                                     ...                                                                                                                    \...          on.create(                                                                                    messages=[{"r\                                                                                                                                       \                                                  \
+...                                                                                                                        messages=[{"r\                                                                                                       \ole":"system","cole":"system","content":"You are Mithra."},
+\...             ...                                                                                                                    \                                                                                                       \ole":"system","content":"You are Mithra."},                                                                                                            {"role":"user","content":data.query}]
+     {"role":"user","conten...                                                                                                                    \ou are Mithra."},                                                                           {"role":"user","content":data.query}]t("lore", [])
+                                                                                                                       \         ).choices[0].message.content                                        ).choices[0].message.content
+                                                                    ...                                                                                                                    \        \
+...                                                                                                                    \             lore = persona.get                                                                                         lore = persona.get().get("lore", [])
+...                                                                                                                    \                                            lore = persona.get().get("lore", [])
+                               ...                                                                                                                                                           \                                                 i...                                                                                                                    \...                                                                                                                                                                   \                                                                         ...                                                                                                                    \f lore and random.random() < 0.1:
+...                                                  llm_out = f"{random.choice(lore)}\n{llm_out}"                                                                                         \                                                   i...                                                                                                                                                                                        \          score = sentim.analyze(llm_out)
+                                                                          llm_out = f"{random.choice(lore)}\n{llm_out}"                                                          score = sentim.analyze(llm_out)
+                                                                          llm_out = f"{random.choice(lore)}\n{llm_out}"
+
+                                                                                  emo_label = emotion.interpret(score)
+                                                                              score = sentim.analyze(llm_out)
+                                                             emo_label = emotion.interpret(score)
+                                                                              score = sentim.analyze(llm_out)
+
+                                                                                      bg.add_task(save_memory, data.query)                                                                                emo_label = emotion.interpret(score)
+                                                                 bg.add_task(save_memory, data.query)
+
+
+
+                                                                                      bg.add_task(save_memory, data.quer    return {"response": llm_out, "emotion": emo_label}               return {"response": llm_out, "emotion": emo_label}
+
+
+
+
+
+  File "<python-input-104>", line 5
+    if need_clarify(data.query):
+IndentationError: unexpected indent
+>>> @app.post("/remind")
+... async def set_reminder(data: ReminderIn, key=Depends(require_key)):
+...                                                                                                         reminder.sc\hedule(data.text, data.time)
+...                                                                                                             save_me\mory(f"Reminder:{data.text}@{data.time}")
+...                                                                                                                 ret\urn {"status": "Reminder scheduled"}
+...
+  File "<python-input-105>", line 4
+    save_memory(f"Reminder:{data.text}@{data.time}")
+IndentationError: unexpected indent
+>>> @app.post("/translate")
+... async def translate(data: TextIn, target: str = "en", key=Depends(require_key)):
+...                                                                                                             return \{"translation": f"[Translated to {target}]: {data.text}"}
+...
+Traceback (most recent call last):
+  File "<python-input-106>", line 2, in <module>
+    async def translate(data: TextIn, target: str = "en", key=Depends(require_key)):
+                                                                      ^^^^^^^^^^^
+NameError: name 'require_key' is not defined
+>>> @app.post("/speak")
+... async def speak(data: TextIn, key=Depends(require_key)):
+...                                                                                                                 ret\urn {"audio_hex": tts.synthesize(data.text)}
+...
+Traceback (most recent call last):
+  File "<python-input-107>", line 2, in <module>
+    async def speak(data: TextIn, key=Depends(require_key)):
+                                              ^^^^^^^^^^^
+NameError: name 'require_key' is not defined
+>>> @app.post("/listen")
+... async def listen(data: TextIn, key=Depends(require_key)):
+...                                                                                                                    \ try:
+...                                                                                                                    \                                                                                                                       \      txt = stt.transcribe(data.text)                                                                                                                                                                                                         \\                                                                                                                                     return {"text": txt}                                                                                                                                                                                                             \\                                                                                                                                                                                                                                              \
+...                                                                                                                                                                                                                                           \
+                                                                                                                                                                                                                                              \
+...                                                                                                                                                                                                                                           \
+                                                                                                                        
+  File "<python-input-108>", line 5
+    return {"text": txt}
+IndentationError: unexpected indent
+>>> @app.post("/feedback")
+... async def feedback(data: FeedbackIn, key=Depends(require_key)):
+...                                                                                                                    \     save_memory(f"Feedback:{data.rating}")
+...                                                                                                                    \         return {"status": "Thanks"}
+...                                                                                                                    \
+  File "<python-input-109>", line 4
+    return {"status": "Thanks"}
+IndentationError: unexpected indent
+>>> @app.get("/digest")
+... async def digest(key=Depends(require_key)):
+...                                                                                                                    \         with Session(engine) as session:                                                                                                                                                                                                     \\                                                                                                                                             items = session.exec(SQLModel.select(Memory).order_by(Memory.ts.desc()).limit(5)).all()                                                                                                                                  \\                                                                                                                                                 return {"digest": [m.text for m in items]}                                                                                                                                                                           \\                                                                                                                        
+  File "<python-input-110>", line 5
+    return {"digest": [m.text for m in items]}
+IndentationError: unexpected indent
+>>> @app.get("/dream")
+... async def dream(key=Depends(require_key)):
+...                                                                                                                    \             with Session(engine) as session:                                                                                                                                                                                                 \\                                                                                                                                                     dream_mem = session.exec(SQLModel.select(Memory)                                                                                                                                                                 \\                                                                                                                                                                                      .where(Memory.text.startswith("Dream:"))                                                                                                                                        \\                                                                                                                                                                                                                       .order_by(Memory.ts.des \c())                                                                                                                                                                                                                                          \\                                                                                                                                                                                                                                                                                                                                                                      \
+...                                                                                                                                                                                                                                           \
+                                                                                                                                                                                                                                              \
+...                                                                                                                                                                                                                                           \
+                                                                                                                        
+  File "<python-input-111>", line 8
+    return {"dream": (dream_mem.text[len("Dream:"):]) if dream_mem else ""}
+IndentationError: unexpected indent
+>>> @app.get("/health")
+... async def health(key=Depends(require_key)):
+...                                                                                                                    \                 return {"state": "Awakened", "threads": threading.active_count()}
+...                                                                                                                    \
+Traceback (most recent call last):
+  File "<python-input-112>", line 2, in <module>
+    async def health(key=Depends(require_key)):
+                                 ^^^^^^^^^^^
+NameError: name 'require_key' is not defined
+>>> @app.exception_handler(Exception)
+... async def all_exception_handler(request, exc):
+...                                                                                                                    \                     logger.error(f"Unhandled error: {exc}")
+...                                                                                                                    \                         return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+...                                                                                                                    \
+  File "<python-input-113>", line 4
+    return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+IndentationError: unexpected indent
+>>> if __name__ == "__main__":
+...                                                                                                                    \                         import uvicorn
+...                                                                                                                    \                             uvicorn.run("mithra_v2_10:app", host="0.0.0.0", port=8000, reload=True)
