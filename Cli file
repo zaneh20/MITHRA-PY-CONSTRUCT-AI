@@ -1,0 +1,69 @@
+import requests
+import json
+import sys
+
+API_URL = "http://localhost:8000/mithra"
+
+def ask_mithra(payload):
+    try:
+        r = requests.post(API_URL, json=payload)
+        data = r.json()
+    except Exception as e:
+        print("❌ Server error:", getattr(r, 'text', str(e)))
+        return
+
+    if 'reply' in data:
+        print("\nMithra:\n", data['reply'])
+    if 'error' in data:
+        print("\n⚠️ ERROR:\n", data['error'])
+        if 'trace' in data:
+            print("\nTraceback:\n", data['trace'])
+    # Print full JSON if you want debugging/extra info:
+    # print(json.dumps(data, indent=2))
+
+def main():
+    print("\n✨ MITHRA CLI: Hybrid AI Client ✨")
+    print("Modes: chat | codex | dream | timeline | ritual | symbol | prediction | past_life | quantum | web")
+    user_id = input("User ID: ").strip() or "zane"
+
+    while True:
+        use_json = input("\nType 'json' to load a prompt from file, or press Enter for manual input: ").strip().lower()
+        if use_json == "json":
+            file_path = input("Enter JSON file path: ").strip()
+            try:
+                with open(file_path, "r") as f:
+                    payload = json.load(f)
+                ask_mithra(payload)
+            except Exception as e:
+                print("❌ Could not load file:", e)
+            continue
+
+        # Manual input mode:
+        mode = input("Mode: ").strip() or "chat"
+        message = input("Your message/query: ").strip()
+        event_type = input("Event Type/Title (if needed): ").strip()
+        chrono_spine = input("Chrono-Spine (if needed): ").strip()
+        hybrid_theory = input("Hybrid Time Theory (if needed): ").strip()
+        glyphic_resonance = input("Glyphic Resonance (if needed): ").strip()
+        quantum_flag = input("Quantum Flag (0 or 1): ").strip() or "0"
+        prediction_node = input("Prediction Node (if needed): ").strip()
+        ritual_type = input("Ritual Type (if needed): ").strip()
+        past_life = input("Past Life (if needed): ").strip()
+
+        payload = {
+            "user_id": user_id,
+            "message": message,
+            "mode": mode,
+            "event_type": event_type,
+            "chrono_spine": chrono_spine,
+            "hybrid_theory": hybrid_theory,
+            "glyphic_resonance": glyphic_resonance,
+            "quantum_flag": int(quantum_flag),
+            "prediction_node": prediction_node,
+            "ritual_type": ritual_type,
+            "past_life": past_life,
+        }
+        ask_mithra(payload)
+
+if __name__ == "__main__":
+    main()
